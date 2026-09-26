@@ -91,7 +91,15 @@
 
 <script>
 const $ = id => document.getElementById(id);
-function fmt(v, d=4){ return (v===null||v===undefined) ? "--" : Number(v).toFixed(d); }
+function fmt(v, d){
+  if (v===null||v===undefined) return "--";
+  v = Number(v);
+  if (d !== undefined) return v.toFixed(d);
+  if (v >= 100) return v.toFixed(2);          // SOL 级
+  if (v >= 1) return v.toFixed(4);            // 主流
+  if (v >= 0.001) return v.toFixed(5);        // DOGE 级
+  return v.toFixed(8).replace(/0+$/,"").replace(/\.$/,".0");  // PEPE 级
+}
 
 function drawSpark(hist){
   const cv = $("spark"), ctx = cv.getContext("2d");
@@ -134,7 +142,7 @@ async function tick(){
   m.className = "badge " + (d.mode === "live" ? "live" : "paper");
   $("balance").textContent = fmt(d.balance,4);
   $("pricelbl").textContent = "最新价 (" + (d.symbol||"--") + ")";
-  $("price").textContent = fmt(d.price,4);
+  $("price").textContent = fmt(d.price);
   $("today").textContent = (d.today??"--") + " / " + (d.max_day??"--");
 
   const pr = $("posr"), pb = $("posbox");
@@ -146,7 +154,7 @@ async function tick(){
     pb.innerHTML =
       `<span class="posbig ${sideCls}">${side}</span>` +
       `<div style="margin-top:6px" class="mut">` +
-      `品种 <b>${d.position.sym||'--'}</b> · 持仓 <b>${fmt(d.position.contracts,0)}</b> 张 · 开仓价 <b>${fmt(d.position.entry,4)}</b><br>` +
+      `品种 <b>${d.position.sym||'--'}</b> · 持仓 <b>${fmt(d.position.contracts,0)}</b> 张 · 开仓价 <b>${fmt(d.position.entry)}</b><br>` +
       `最高 R <b>${fmt(d.position.max_r,2)}</b> · 香农已平 <b>${d.position.layers}</b> 层` +
       `</div>`;
   }else{
@@ -170,7 +178,7 @@ async function tick(){
     const bOk = w.boll_w !== null && w.boll_w >= d.boll_th;
     html += `<tr>` +
       `<td style="padding:3px 4px"><b>${w.sym}</b></td>` +
-      `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace">${fmt(w.price,4)}</td>` +
+      `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace">${fmt(w.price)}</td>` +
       `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace">${fmt(w.rsi,1)}</td>` +
       `<td style="padding:3px 4px;text-align:center" class="${w.macd==='金叉'?'up':(w.macd==='死叉'?'dn':'mut')}">${w.macd||'--'}</td>` +
       `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace" class="${bOk?'up':'mut'}">${fmt(w.boll_w,4)}</td>` +
