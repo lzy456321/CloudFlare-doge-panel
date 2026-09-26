@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>DOGE 策略面板 · 云端版</title>
+<title>多币种策略面板 · 云端版</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root{
@@ -54,7 +54,7 @@
 <body>
 <div class="wrap">
   <div class="hd">
-    <h1>DOGE 合约 · 激进趋势版</h1>
+    <h1>多币种合约 · 激进趋势版</h1>
     <span class="badge paper" id="mode">--</span>
     <span style="font-size:12px;color:var(--mut)"><span class="dot" id="dot"></span><span id="conn">连接中</span></span>
     <span class="hdtime" id="time">--</span>
@@ -62,7 +62,7 @@
 
   <div class="grid">
     <div class="card kpi"><div class="lbl">余额 (USDT)</div><div class="val" id="balance">--</div></div>
-    <div class="card kpi"><div class="lbl">最新价</div><div class="val" id="price">--</div></div>
+    <div class="card kpi"><div class="lbl" id="pricelbl">最新价</div><div class="val" id="price">--</div></div>
     <div class="card kpi"><div class="lbl">今日开仓</div><div class="val" id="today">--</div></div>
     <div class="card kpi"><div class="lbl">持仓浮盈 (R)</div><div class="val" id="posr">--</div></div>
   </div>
@@ -133,6 +133,7 @@ async function tick(){
   m.textContent = d.mode === "live" ? "实盘" : "纸面模拟";
   m.className = "badge " + (d.mode === "live" ? "live" : "paper");
   $("balance").textContent = fmt(d.balance,4);
+  $("pricelbl").textContent = "最新价 (" + (d.symbol||"--") + ")";
   $("price").textContent = fmt(d.price,4);
   $("today").textContent = (d.today??"--") + " / " + (d.max_day??"--");
 
@@ -145,7 +146,7 @@ async function tick(){
     pb.innerHTML =
       `<span class="posbig ${sideCls}">${side}</span>` +
       `<div style="margin-top:6px" class="mut">` +
-      `持仓 <b>${fmt(d.position.contracts,0)}</b> 张 · 开仓价 <b>${fmt(d.position.entry,4)}</b><br>` +
+      `品种 <b>${d.position.sym||'--'}</b> · 持仓 <b>${fmt(d.position.contracts,0)}</b> 张 · 开仓价 <b>${fmt(d.position.entry,4)}</b><br>` +
       `最高 R <b>${fmt(d.position.max_r,2)}</b> · 香农已平 <b>${d.position.layers}</b> 层` +
       `</div>`;
   }else{
@@ -153,14 +154,31 @@ async function tick(){
     pb.innerHTML = '<span class="mut">无持仓 · 观望中</span>';
   }
 
-  const t = d.trend, tTxt = t>0 ? "多" : (t<0 ? "空" : "震"),
-        tCls = t>0 ? "up" : (t<0 ? "dn" : "mut"),
-        bOk = d.boll_w !== null && d.boll_w >= d.boll_th;
-  $("conds").innerHTML =
-    `<span class="chip">BOLL宽 <b class="${bOk?'up':'mut'}">${fmt(d.boll_w,4)} / ${fmt(d.boll_th,3)}</b></span>` +
-    `<span class="chip">RSI <b>${fmt(d.rsi,1)}</b></span>` +
-    `<span class="chip">MACD <b class="${d.macd==='金叉'?'up':'dn'}">${d.macd||'--'}</b></span>` +
-    `<span class="chip">M15趋势 <b class="${tCls}">${tTxt}</b></span>`;
+  // 多币种监控表（v2.1）：每币种一行，M15列=趋势方向
+  const wl = Array.isArray(d.watch) && d.watch.length ? d.watch : [];
+  let html = '<table style="width:100%;font-size:12.5px;border-collapse:collapse">' +
+    '<tr style="color:var(--mut)">' +
+    '<th style="text-align:left;font-weight:500;padding:2px 4px">品种</th>' +
+    '<th style="text-align:right;font-weight:500;padding:2px 4px">价格</th>' +
+    '<th style="text-align:right;font-weight:500;padding:2px 4px">RSI</th>' +
+    '<th style="text-align:center;font-weight:500;padding:2px 4px">MACD</th>' +
+    '<th style="text-align:right;font-weight:500;padding:2px 4px">BOLL宽</th>' +
+    '<th style="text-align:center;font-weight:500;padding:2px 4px">M15趋势</th>' +
+    '</tr>';
+  wl.forEach(w=>{
+    const t = w.trend, tTxt = t>0?"多":(t<0?"空":"震"), tCls = t>0?"up":(t<0?"dn":"mut");
+    const bOk = w.boll_w !== null && w.boll_w >= d.boll_th;
+    html += `<tr>` +
+      `<td style="padding:3px 4px"><b>${w.sym}</b></td>` +
+      `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace">${fmt(w.price,4)}</td>` +
+      `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace">${fmt(w.rsi,1)}</td>` +
+      `<td style="padding:3px 4px;text-align:center" class="${w.macd==='金叉'?'up':(w.macd==='死叉'?'dn':'mut')}">${w.macd||'--'}</td>` +
+      `<td style="padding:3px 4px;text-align:right;font-family:ui-monospace,monospace" class="${bOk?'up':'mut'}">${fmt(w.boll_w,4)}</td>` +
+      `<td style="padding:3px 4px;text-align:center" class="${tCls}">${tTxt}</td>` +
+      `</tr>`;
+  });
+  html += '</table><div style="margin-top:6px;font-size:11px;color:var(--mut)">三条件同时满足才会开仓：BOLL宽≥' + fmt(d.boll_th,3) + ' + MACD同向 + M15趋势确认（红=多 绿=空）</div>';
+  $("conds").innerHTML = html;
 
   drawSpark(d.px_hist);
 
