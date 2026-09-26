@@ -40,6 +40,16 @@
   .posbig{font-size:24px;font-weight:700;font-family:ui-monospace,Consolas,monospace}
   h2{font-size:13px;color:var(--mut);font-weight:500;margin-bottom:8px}
 </style>
+<script>
+(function(){
+  var p = new URLSearchParams(location.search).get("api");
+  if (p) { try { localStorage.setItem("doge_api", p); } catch(e){} }
+  var saved = null;
+  try { saved = localStorage.getItem("doge_api"); } catch(e){}
+  window.__API = saved || "https://likes-olive-dark-numerical.trycloudflare.com";
+  window.API_BASE = function(){ return window.__API; };
+})();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -111,7 +121,7 @@ function drawSpark(hist){
 async function tick(){
   let d;
   try{
-    const r = await fetch("https://korea-yards-lay-navy.trycloudflare.com/status.json?_="+Date.now(), {cache:"no-store"});
+    const r = await fetch(API_BASE()+"/status.json?_="+Date.now(), {cache:"no-store"});
     d = await r.json();
     $("dot").className = "dot"; $("conn").textContent = "已连接";
   }catch(e){
